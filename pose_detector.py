@@ -1,10 +1,24 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+import math
 
 
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
+
+def calculate_angle(a,b,c):
+    a = np.array(a) # First
+    b = np.array(b) # Mid
+    c = np.array(c) # End
+    
+    radians = np.arctan2(c[1]-b[1], c[0]-b[0]) - np.arctan2(a[1]-b[1], a[0]-b[0])
+    angle = np.abs(radians*180.0/np.pi)
+    
+    if angle >180.0:
+        angle = 360-angle
+        
+    return angle 
 
 cap = cv2.VideoCapture(0)
 ## Setup mediapipe instance
@@ -26,7 +40,29 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
         # Extract landmarks
         try:
             landmarks = results.pose_landmarks.landmark
-            print(landmarks)
+            
+            # Get coordinates
+            nose = [landmarks[mp_pose.PoseLandmark.NOSE.value].x,landmarks[mp_pose.PoseLandmark.NOSE.value].y]
+            shoulder_l = [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]
+            shoulder_r = [landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_SHOULDER.value].y]
+            eye_l = [landmarks[mp_pose.PoseLandmark.LEFT_EYE.value].x,landmarks[mp_pose.PoseLandmark.LEFT_EYE.value].y]
+            eye_r = [landmarks[mp_pose.PoseLandmark.RIGHT_EYE.value].x,landmarks[mp_pose.PoseLandmark.RIGHT_EYE.value].y]
+
+            # Calculate angle
+            ang_shoul_r = calculate_angle(eye_r,shoulder_r,nose)
+
+            # Visualize angle
+            cv2.putText(image, str(ang_shoul_r),
+                        tuple(np.multiply(shoulder_r, [640, 480]).astype(int)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
+            
+            dist = math.dist(shoulder_l,shoulder_r)
+
+            # For now the distance is displayed at the left shoulder
+            cv2.putText(image, str(dist),
+                        tuple(np.multiply(shoulder_l, [640, 480]).astype(int)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
+
         except:
             pass
         
@@ -36,7 +72,6 @@ with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as 
                                   mp_drawing.DrawingSpec(color=(245,117,66), thickness=2, circle_radius=2), 
                                   mp_drawing.DrawingSpec(color=(245,66,230), thickness=2, circle_radius=2))               
         
-        image = cv2.flip(image, 1)
         cv2.imshow('Mediapipe Feed', image)
 
         if cv2.waitKey(10) & 0xFF == ord('q'):
