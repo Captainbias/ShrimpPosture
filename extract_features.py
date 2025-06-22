@@ -94,6 +94,9 @@ while True:
     ret, frame = cap.read()
     if not ret:
         break
+    
+    # Flip the frame horizontally for a mirror effect
+    frame = cv2.flip(frame, 1)
 
     # flip horizontally
     frame = cv2.flip(frame, 1)
