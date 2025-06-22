@@ -86,40 +86,41 @@ def extract_features_and_draw(frame, pose_result, face_result):
         return None
 
 
-# Capture loop
-cap = cv2.VideoCapture(0)
-print("Press 'g' = good, 'b' = bad, 'q' = quit")
+if __name__ == "__main__":
+    # Capture loop
+    cap = cv2.VideoCapture(0)
+    print("Press 'g' = good, 'b' = bad, 'q' = quit")
 
-while True:
-    ret, frame = cap.read()
-    if not ret:
-        break
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
 
-    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    pose_result = pose.process(rgb)
-    face_result = face_mesh.process(rgb)
-    features = extract_features_and_draw(frame, pose_result, face_result)
+        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        pose_result = pose.process(rgb)
+        face_result = face_mesh.process(rgb)
+        features = extract_features_and_draw(frame, pose_result, face_result)
 
-    cv2.imshow("Posture Capture", frame)
-    key = cv2.waitKey(1) & 0xFF
+        cv2.imshow("Posture Capture", frame)
+        key = cv2.waitKey(1) & 0xFF
 
-    if key in [ord('g'), ord('b')]:
-        label = 0 if key == ord('g') else 1
-        if features and validate_features(features):
-            print("Press 'y' to confirm saving this sample...")
-            confirm = cv2.waitKey(0) & 0xFF
-            if confirm == ord('y'):
-                features.append(label)
-                with open(csv_path, 'a') as f:
-                    f.write(','.join(map(str, features)) + '\n')
-                print(f"✅ {'GOOD' if label == 0 else 'BAD'} posture recorded.")
+        if key in [ord('g'), ord('b')]:
+            label = 0 if key == ord('g') else 1
+            if features and validate_features(features):
+                print("Press 'y' to confirm saving this sample...")
+                confirm = cv2.waitKey(0) & 0xFF
+                if confirm == ord('y'):
+                    features.append(label)
+                    with open(csv_path, 'a') as f:
+                        f.write(','.join(map(str, features)) + '\n')
+                    print(f"✅ {'GOOD' if label == 0 else 'BAD'} posture recorded.")
+                else:
+                    print("⏩ Sample skipped.")
             else:
-                print("⏩ Sample skipped.")
-        else:
-            print("⚠ Feature validation failed. Sample skipped.")
-    elif key == ord('q'):
-        break
+                print("⚠ Feature validation failed. Sample skipped.")
+        elif key == ord('q'):
+            break
 
-cap.release()
-cv2.destroyAllWindows()
+    cap.release()
+    cv2.destroyAllWindows()
 

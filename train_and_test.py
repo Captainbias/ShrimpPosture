@@ -21,8 +21,8 @@ model.fit(X_train, y_train)
 # Evaluate on test set
 y_pred = model.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
-print(f"\n✅ Model accuracy on test set: {accuracy * 100:.2f}%")
+print(f"\n Model accuracy on test set: {accuracy * 100:.2f}%")
 
 # Save trained model
 joblib.dump(model, 'posture_model.pkl')
-print("✅ Trained model saved as 'posture_model.pkl'")
+print(" Trained model saved as 'posture_model.pkl'")
