@@ -20,8 +20,8 @@ pose = mp_pose.Pose()
 face_mesh = mp_face.FaceMesh()
 
 # Drawing styles
-circle_spec = {'radius': 4, 'color': (0, 255, 0), 'thickness': -1}
-line_color = (255, 0, 0)
+circle_spec = {'radius': 6, 'color': (0, 102, 204), 'thickness': -1}
+line_color = (255, 102, 255)
 
 def get_point(landmarks, idx):
     return np.array([landmarks[idx].x, landmarks[idx].y])
@@ -82,8 +82,12 @@ def extract_features_and_draw(frame, pose_result, face_result):
 def gen_frames():
     cap = cv2.VideoCapture(0)
     previous_posture = None
-    last_alert_time = time.time()  # Track the last alert time
-    alert_interval = 5  # Interval in seconds
+    consecutive_bad_posture_count = 0  # Counter for consecutive "BAD" detections
+    last_detection_time = time.time()  # Track the last detection time
+    detection_interval = 5  # Interval in seconds
+    text_display_time = 1  # Duration to display text in seconds
+    text_last_updated = time.time()  # Track when the text was last updated
+    displayed_text = ""  # Text to display on the frame
 
     while True:
         success, frame = cap.read()
@@ -98,23 +102,39 @@ def gen_frames():
         face_result = face_mesh.process(rgb)
         features = extract_features_and_draw(frame, pose_result, face_result)
 
-        # Annotate the frame with posture status
-        if features:
-            # Predict posture using the model
-            features_df = np.array(features).reshape(1, -1)
-            prediction = model.predict(features_df)[0]
-            current_posture = "BAD" if prediction == 1 else "GOOD"
-
+        # Perform posture detection every 5 seconds
+        if time.time() - last_detection_time >= detection_interval:
             # Annotate the frame with posture status
-            cv2.putText(frame, f"Posture: {current_posture}", (10, 30),
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0) if current_posture == "GOOD" else (0, 0, 255), 2)
+            if features:
+                # Predict posture using the model
+                features_df = np.array(features).reshape(1, -1)
+                prediction = model.predict(features_df)[0]
+                current_posture = "BAD" if prediction == 1 else "GOOD"
 
-            # Detect posture transition and trigger alert at intervals
-            if current_posture == "BAD" and time.time() - last_alert_time >= alert_interval:
-                alert_bad_posture(random_roast(load_roasts("PostureRoast.txt")))
-                last_alert_time = time.time()  # Update the last alert time
+                # Update the displayed text and timestamp
+                displayed_text = f"Posture: {current_posture}"
+                text_last_updated = time.time()
 
-            previous_posture = current_posture
+                # Trigger alert only when transitioning from "GOOD" to "BAD"
+                if previous_posture == "GOOD" and current_posture == "BAD":
+                    alert_bad_posture(random_roast(load_roasts("PostureRoast.txt")))
+
+                # Track consecutive "BAD" detections
+                if current_posture == "BAD":
+                    consecutive_bad_posture_count += 1
+                    if consecutive_bad_posture_count >= 4:
+                        alert_bad_posture(random_roast(load_roasts("PostureRoast.txt")))
+                        consecutive_bad_posture_count = 0  # Reset the counter after alert
+                else:
+                    consecutive_bad_posture_count = 0  # Reset the counter if posture is "GOOD"
+
+                previous_posture = current_posture
+                last_detection_time = time.time()  # Update the last detection time
+
+        # Display the text for 1 second
+        if time.time() - text_last_updated <= text_display_time:
+            cv2.putText(frame, displayed_text, (10, 30),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0) if "GOOD" in displayed_text else (0, 0, 255), 2)
 
         # Encode the frame as JPEG and yield it
         ret, buffer = cv2.imencode('.jpg', frame)
@@ -134,5 +154,4 @@ def index():
     return render_template('index.html')
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host='0.0.0.0', port=5001, debug=True)
