@@ -11,8 +11,8 @@ y = df['label']
 
 # Train & evaluate using cross-validation
 model = RandomForestClassifier(n_estimators=100, random_state=42)
-scores = cross_val_score(model, X, y, cv=5)
+scores = cross_val_score(model, X, y, cv=10)
 
 # Report accuracy
-print(f"\nAverage Accuracy (5-fold CV): {scores.mean() * 100:.2f}%")
+print(f"\nAverage Accuracy (10-fold CV): {scores.mean() * 100:.2f}%")
 print(f"All Fold Scores: {['{:.2f}%'.format(s*100) for s in scores]}")
